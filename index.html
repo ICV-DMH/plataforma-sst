@@ -890,6 +890,52 @@ td select[data-rf-aplica] { margin-left: 6px; font-size: 12px; padding: 2px 4px;
 .bib-rejilla .chip .icono, .bib-pend .icono, .bib-equipo p .icono { width: 14px; height: 14px; flex: none; vertical-align: -2px; }
 .bib-pend p .icono, .tarjeta p > .icono { width: 16px; height: 16px; vertical-align: -3px; color: var(--ok); }
 
+/* ===== v3.8 · Recorrido, observaciones, agenda, avance por proceso y vista previa ===== */
+.guia .sec-cab { align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.guia .ceja { margin: 0 0 2px; }
+.guia .derecha.fila-flex { gap: 6px; flex-wrap: wrap; }
+.guia-sel { max-width: 420px; margin: 6px 0 4px; }
+.guia-pasos { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.guia-pasos li { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; }
+.guia-pasos li.ok { border-color: #b9dcc6; background: #f3faf5; }
+.guia-pasos li.off { opacity: .6; }
+.guia-pasos .g-n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--grafito, #2c343d); color: #fff; font-size: 14px; }
+.guia-pasos li.ok .g-n { background: #1f7a4a; }
+.guia-pasos .g-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.guia-pasos .g-txt small { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; color: var(--rojo); font-weight: 700; }
+.guia-pasos .g-txt span { overflow-wrap: anywhere; }
+.guia-mostrar { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+.obs-lista { display: grid; gap: 10px; margin-top: 10px; }
+.obs-item { border: 1px solid var(--borde); border-left: 4px solid var(--rojo); border-radius: 10px; padding: 10px 12px; background: #fff; }
+.obs-item.derivada { border-left-color: #1f7a4a; }
+.obs-item.cerrada { border-left-color: #9aa3ad; opacity: .9; }
+.obs-cab { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.obs-que { margin: 6px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.obs-acc { gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.ag-grupo { margin-top: 14px; }
+.ag-grupo h2 { font-size: 17px; }
+.seg-grupo .btn { min-width: 0; }
+.avance-proc { margin-bottom: 14px; }
+.barra-avance { display: inline-block; width: 120px; height: 8px; border-radius: 6px; background: #e8e5de; overflow: hidden; vertical-align: middle; margin-right: 8px; }
+.barra-avance span { display: block; height: 100%; background: #1f7a4a; }
+.entrevistas textarea, .entrevistas .inp { width: 100%; min-width: 140px; }
+.respaldo-h select { max-width: 100%; }
+.prev-cuerpo { max-height: 60vh; overflow: auto; border: 1px solid var(--borde); border-radius: 8px; padding: 8px; background: #fbfaf7; }
+.prev-hoja { margin: 6px 0; }
+.prev-hoja > summary { cursor: pointer; padding: 4px 0; }
+.prev-tabla { overflow: auto; max-width: 100%; }
+.prev-xl th, .prev-xl td { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.prev-xl tbody th { background: #f1efe9; color: var(--texto-2); }
+.prev-doc { background: #fff; padding: 14px 18px; border-radius: 6px; }
+.prev-doc p { margin: 0 0 6px; }
+.prev-doc td { font-size: 12px; vertical-align: top; }
+@media (max-width: 720px) {
+  .guia-pasos li { grid-template-columns: 30px 1fr; }
+  .guia-pasos li > .btn { grid-column: 2; justify-self: start; }
+  .barra-avance { width: 70px; }
+}
+.ag-grupo td:first-child { white-space: nowrap; }
+
 </style>
 </head>
 <body>
@@ -3508,7 +3554,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
    ============================================================ */
 (() => {
   'use strict';
-  const VERSION_APP = '3.7';
+  const VERSION_APP = '3.8';
 
   // ---------------- estado ----------------
   const st = {
@@ -3522,6 +3568,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
     edit: null, // edición de fila en curso
     irl: { puestos: [] }, // módulo IRL
     casos: [], // módulo Investigación
+    obs: [], // observaciones de terreno (v3.8)
   };
   // Registro de módulos: vistas por ruta, acciones por data-a, manejadores de input/change
   const vistas = {}, acciones = {}, oyentes = { input: [], change: [] };
@@ -3720,7 +3767,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
   };
   const fmtFechaHora = (x) => new Date(x).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   function datosRespaldo() {
-    return { app: 'plataforma-sst-icv', version: VERSION_APP, exportado: new Date().toISOString(), usuario: st.usuario, catalogo: st.catalogo, matrices: st.matrices, irl: st.irl, casos: st.casos };
+    return { app: 'plataforma-sst-icv', version: VERSION_APP, exportado: new Date().toISOString(), usuario: st.usuario, catalogo: st.catalogo, matrices: st.matrices, irl: st.irl, casos: st.casos, obs: st.obs };
   }
   // Solo se actualiza la línea de estado (no se redibuja la vista: no se pierde el foco ni lo escrito)
   function pintarAuto() {
@@ -3740,7 +3787,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
       pendienteDesde = 0;
       try {
         await DB.escribir('datos', {
-          catalogo: st.catalogo, matrices: st.matrices, irl: st.irl, casos: st.casos, usuario: st.usuario, ultimoRespaldo: st.ultimoRespaldo, guardado: new Date().toISOString(),
+          catalogo: st.catalogo, matrices: st.matrices, irl: st.irl, casos: st.casos, obs: st.obs, usuario: st.usuario, ultimoRespaldo: st.ultimoRespaldo, guardado: new Date().toISOString(),
         });
         marcaGuardado(true);
       } catch (e) {
@@ -3789,6 +3836,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
         guardadoEn = Date.parse(d.guardado) || 0;
         st.irl = d.irl && Array.isArray(d.irl.puestos) ? d.irl : { puestos: [] };
         st.casos = Array.isArray(d.casos) ? d.casos : [];
+        st.obs = Array.isArray(d.obs) ? d.obs : [];
       }
       if (migrarRF() + migrarNiveles()) await guardar(true); // la conversión RC → RF se guarda de inmediato
     } catch (e) {
@@ -3934,7 +3982,11 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
   }
   window.addEventListener('error', (ev) => { if (ev.error) avisarError('una operación de la página', ev.error); });
   window.addEventListener('unhandledrejection', (ev) => avisarError('una operación de la página', ev.reason));
-  function descargar(blob, nombre) {
+  async function descargar(blob, nombre) {
+    // v3.8: el Excel y el Word se revisan en pantalla antes de bajarlos (se puede desactivar en Ajustes)
+    if (APP.vistaPrevia && st.usuario.vistaPrevia !== false && /\.(xlsx|docx)$/i.test(nombre)) {
+      try { if (!(await APP.vistaPrevia(blob, nombre))) return; } catch (e) { console.warn('Vista previa no disponible', e); }
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = nombre;
@@ -4389,7 +4441,22 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
       return { rc, ctl, usados, filas, total };
     });
     const criticas = r.criticas.slice(0, 50);
-    return `<div class="rejilla r2">
+    // v3.8 · Avance por proceso: tareas con peligros identificados y sin bloqueos (no equivale a la aprobación)
+    const val = MOD.validar(m, st.catalogo, 'borrador').filter((v) => v.nivel === 'bloqueo');
+    const filaTarea = new Map(m.filas.map((f) => [f.id, f.tareaId]));
+    const conBloqueo = new Set(val.map((v) => v.tareaId || filaTarea.get(v.filaId)).filter(Boolean));
+    const procs = new Map();
+    m.tareas.forEach((t) => {
+      const k = (t.proceso || '').trim() || 'Sin proceso';
+      const x = procs.get(k) || { k, total: 0, conPel: 0, listas: 0 };
+      const nf = m.filas.filter((f) => f.tareaId === t.id).length;
+      x.total++; if (nf) x.conPel++; if (nf && !conBloqueo.has(t.id)) x.listas++;
+      procs.set(k, x);
+    });
+    const P = [...procs.values()].sort((a, b) => a.k.localeCompare(b.k, 'es'));
+    const avance = P.length ? `<div class="tarjeta avance-proc"><h2>Avance por proceso</h2><p class="muted peq">Tareas con peligros identificados y sin bloqueos pendientes. No reemplaza la revisión ni la aprobación de la matriz.</p>
+      <table class="t compacta"><thead><tr><th>Proceso</th><th class="num">Tareas</th><th class="num">Con peligros</th><th>Listas</th></tr></thead><tbody>${P.map((x) => { const pc = Math.round((x.listas / x.total) * 100); return `<tr><td>${esc(x.k)}</td><td class="num">${x.total}</td><td class="num">${x.conPel}</td><td><div class="barra-avance" role="img" aria-label="${x.listas} de ${x.total} tareas listas"><span style="width:${pc}%"></span></div><span class="peq">${x.listas} de ${x.total}</span></td></tr>`; }).join('')}</tbody></table></div>` : '';
+    return `${avance}<div class="rejilla r2">
       <div class="tarjeta"><h2>Niveles de riesgo</h2><table class="t">${CAT.CATEGORIAS.map(niveles).join('')}</table></div>
       <div class="tarjeta"><h2>Riesgos de fatalidad y controles críticos</h2>
         ${cob.length ? `<table class="t"><thead><tr><th>RF</th><th class="num">Filas</th><th>Controles usados</th></tr></thead><tbody>${cob.map((c) => `<tr><td><span class="chip rc">${esc(RF.etiqueta(c.rc))}</span> ${esc(CAT.nombreRC(st.catalogo, c.rc).slice(0, 50))}</td><td class="num">${c.filas}</td><td class="peq">${[...c.usados].sort().join(', ') || '<span class="alerta-fila">ninguno</span>'}${c.total ? ` <span class="muted">de ${c.total}</span>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">La matriz no tiene filas asociadas a riesgos de fatalidad (RF).</p>'}
@@ -4843,7 +4910,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
     const ev = st.casos.flatMap((c) => c.evidencias || []);
     const evImg = ev.filter((e) => e.img), evRef = ev.filter((e) => !e.img);
     const imgBytes = evImg.reduce((a, e) => a + Math.round((e.img.length - e.img.indexOf(',') - 1) * 0.75), 0);
-    const mod = { catalogo: kb(st.catalogo), miper: kb(st.matrices), irl: kb(st.irl), inv: kb(st.casos) };
+    const mod = { catalogo: kb(st.catalogo), miper: kb(st.matrices), irl: kb(st.irl), inv: kb(st.casos), obs: kb(st.obs) };
     return { mod, total: Object.values(mod).reduce((a, b) => a + b, 0), evImg: evImg.length, evRef: evRef.length, imgBytes };
   }
   const fmtTam = (b) => (b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB');
@@ -4860,12 +4927,14 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
             <tr><td>Catálogo (SIGO-F-006 y libros RF)</td><td class="num">${Object.keys((st.catalogo.rf && st.catalogo.rf.items) || {}).length} libros RF</td><td class="num">${fmtTam(T.mod.catalogo)}</td></tr>
             <tr><td>IRL (puestos, entregas y nómina)</td><td class="num">${st.irl.puestos.length}${nNom ? ` · ${nNom} en nómina` : ''}</td><td class="num">${fmtTam(T.mod.irl)}</td></tr>
             <tr><td>Investigaciones (incluye fotos de evidencia)</td><td class="num">${st.casos.length}</td><td class="num">${fmtTam(T.mod.inv)}</td></tr>
+            <tr><td>Observaciones de terreno</td><td class="num">${st.obs.length}</td><td class="num">${fmtTam(T.mod.obs)}</td></tr>
             <tr><td><b>Total del respaldo</b></td><td></td><td class="num"><b>${fmtTam(T.total)}</b></td></tr></tbody></table>
           <p class="muted peq">Evidencias: ${T.evImg} foto(s) guardada(s) en el navegador (${fmtTam(T.imgBytes)}) y ${T.evRef} documento(s) registrados solo como referencia (nombre y huella; el archivo no se guarda aquí). Última descarga de respaldo: ${st.ultimoRespaldo ? fmtFechaHora(st.ultimoRespaldo) : 'nunca'}.${AUTO.cfg.handle && AUTO.cfg.ultimo ? ` Último respaldo automático: ${fmtFechaHora(AUTO.cfg.ultimo)}` : ''}</p>
           <div class="fila-flex"><button class="btn prim" data-a="respaldo">⬇ Descargar respaldo (.json)</button><button class="btn" data-a="restaurar">⬆ Restaurar respaldo</button></div></div>
         ${vAutoResp()}
         <div class="tarjeta"><h2>Tu nombre</h2><p class="muted peq">Se escribe en el historial de revisiones, aprobaciones y entregas. Es un nombre escrito: no autentica a la persona ni equivale a firma electrónica.</p>
-          <div class="rejilla r2"><div class="campo"><label>Nombre</label><input data-usuario="nombre" value="${esc(st.usuario.nombre)}" autocomplete="name"></div><div class="campo"><label>Cargo</label><input data-usuario="cargo" value="${esc(st.usuario.cargo)}" autocomplete="organization-title"></div></div></div>
+          <div class="rejilla r2"><div class="campo"><label>Nombre</label><input data-usuario="nombre" value="${esc(st.usuario.nombre)}" autocomplete="name"></div><div class="campo"><label>Cargo</label><input data-usuario="cargo" value="${esc(st.usuario.cargo)}" autocomplete="organization-title"></div></div>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" data-pref="vistaPrevia" ${st.usuario.vistaPrevia === false ? '' : 'checked'}> Revisar el Excel y el Word en pantalla antes de descargarlos</label></div>
         <div class="tarjeta"><h2>Exportar MIPER</h2><p class="peq">Consolidado de todas las matrices en una sola tabla, listo para el Power BI de MIPER.</p><button class="btn" data-a="consolidado" ${st.matrices.length ? '' : 'disabled'}>⬇ Consolidado para Power BI (.xlsx)</button>${st.matrices.length ? '' : '<p class="muted peq">Sin MIPER cargadas.</p>'}</div>
         <div class="tarjeta"><h2>Borrar datos de este navegador</h2><p class="peq">Elimina MIPER, catálogo, IRL con entregas y nómina, e investigaciones. Descarga un respaldo antes.</p><button class="btn peligro" data-a="borrar-todo">Borrar todos los datos</button></div>
       </div>`;
@@ -4921,7 +4990,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
     const conCarpeta = AUTO.cfg.handle && AUTO.estado === 'activo';
     const ok = await confirmar('Restaurar respaldo', `<p>${nombre ? `«${esc(nombre)}». ` : ''}El respaldo es del ${d.exportado ? new Date(d.exportado).toLocaleString('es-CL') : 'fecha desconocida'} (versión ${esc(d.version || '—')}). <b>Reemplazará</b> los datos actuales de este navegador:</p>
       <table class="t compacta"><thead><tr><th>Módulo</th><th class="num">Actual</th><th class="num">Respaldo</th></tr></thead><tbody>
-      ${fila('MIPER', st.matrices.length, d.matrices.length)}${fila('Puestos IRL', st.irl.puestos.length, d.irl ? d.irl.puestos.length : 0)}${fila('Personas en nómina', nNom(st.irl), nNom(d.irl))}${fila('Investigaciones', st.casos.length, (d.casos || []).length)}</tbody></table>
+      ${fila('MIPER', st.matrices.length, d.matrices.length)}${fila('Puestos IRL', st.irl.puestos.length, d.irl ? d.irl.puestos.length : 0)}${fila('Personas en nómina', nNom(st.irl), nNom(d.irl))}${fila('Investigaciones', st.casos.length, (d.casos || []).length)}${fila('Observaciones de terreno', st.obs.length, (d.obs || []).length)}</tbody></table>
       <p class="muted peq">${conCarpeta ? `Antes de reemplazar, se guarda una copia de lo actual en «${esc(AUTO.cfg.nombre)}».` : 'Si tienes cambios que no están en ese respaldo, descarga primero un respaldo de lo actual.'}</p>`, 'Reemplazar datos', 'peligro');
     if (!ok) return false;
     if (conCarpeta) {
@@ -4933,6 +5002,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
     st.matrices = d.matrices;
     st.irl = d.irl && Array.isArray(d.irl.puestos) ? d.irl : { puestos: [] };
     st.casos = Array.isArray(d.casos) ? d.casos : [];
+    st.obs = Array.isArray(d.obs) ? d.obs : [];
     migrarRF();
     if (d.usuario && !st.usuario.nombre) st.usuario = d.usuario;
     await guardar(true); render();
@@ -4947,6 +5017,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
     if (!Array.isArray(d.matrices)) return 'El respaldo no trae la lista de MIPER.';
     if (d.matrices.some((m) => !m || !m.id || !Array.isArray(m.filas) || !Array.isArray(m.tareas))) return 'Hay MIPER incompletas en el respaldo (sin id, tareas o filas).';
     if (d.irl && !Array.isArray(d.irl.puestos)) return 'La sección IRL del respaldo está dañada.';
+    if (d.obs && !Array.isArray(d.obs)) return 'La sección de observaciones de terreno del respaldo está dañada.';
     if (d.casos && (!Array.isArray(d.casos) || d.casos.some((c) => !c || !c.id || !Array.isArray(c.hechos)))) return 'La sección de investigaciones del respaldo está dañada.';
     return null;
   }
@@ -5300,7 +5371,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
           botones: [{ texto: 'Cancelar', valor: null }, { texto: 'Borrar', clase: 'peligro', valor: 'datos', validar: (d) => (d.v.trim().toUpperCase() !== 'BORRAR' ? { campo: 'v', msg: 'Escribe BORRAR para confirmar.' } : null) }],
         });
         if (!ok) return;
-        st.matrices = []; st.catalogo = CAT.catalogoVacio(); st.irl = { puestos: [] }; st.casos = [];
+        st.matrices = []; st.catalogo = CAT.catalogoVacio(); st.irl = { puestos: [] }; st.casos = []; st.obs = [];
         await guardar(true); ir('inicio');
         break;
       }
@@ -5402,6 +5473,7 @@ ${h('Heading3', 'heading 3', 20, GRIS, 140, 2)}
     if (el.dataset.firma && m && editable(m)) { m.firmas[el.dataset.firma][+el.dataset.i][el.dataset.k] = el.value; guardar(); return; }
     if (el.dataset.cambio && m && editable(m)) { m.cambios[m.cambios.length - 1].motivo = el.value; guardar(); return; }
     if (el.dataset.usuario) { st.usuario[el.dataset.usuario] = el.value; guardar(); render(); return; }
+    if (el.dataset.pref) { st.usuario[el.dataset.pref] = el.type === 'checkbox' ? el.checked : el.value; guardar(); return; }
   });
 
   // ---------------- API para módulos ----------------
@@ -5899,14 +5971,24 @@ const IRL = (() => {
   function vigWord(r) {
     return (r.vigilancia || []).map((x) => `${x.nombre}: ${x.fecha ? `${x.resultado || 'evaluado'} (${fmtFecha(x.fecha)}${x.fuente ? ', ' + x.fuente : ''})${x.vigilancia ? '. ' + x.vigilancia : ''}` : 'sin evaluación registrada en la MIPER'}`).join('\n');
   }
+  // v3.8 · «Mostrar solo excepciones»: riesgos sin visto bueno, cambiados en la MIPER, huérfanos o con textos faltantes
+  let soloExc = false;
+  const lleno = (x) => String(x || '').split('\n').some((l) => l.trim());
+  function excepcion(r) {
+    if (r.estado === 'descartado') return false;
+    return r.estado === 'pendiente' || !!r.cambioMiper || !!r.huerfano || !lleno(r.medidas) || !lleno(r.metodos) || !lleno(r.faenaAntes) || !lleno(r.faenaComo);
+  }
   function pRiesgos(p) {
     const ed = editable(p);
     const ro = ed ? '' : 'readonly';
     if (!p.riesgos.length) return `<div class="tarjeta vacio"><b>Sin riesgos todavía</b>Marca las tareas de la MIPER en el paso 1 y genera los riesgos, o agrega un riesgo propio.<br><br>${ed ? `<button class="btn prim" data-a="ir" data-h="irl-p/${p.id}/puesto">Ir al paso 1</button> <button class="btn" data-a="irl-r-propio" data-id="${p.id}">＋ Riesgo propio</button>` : ''}</div>`;
     const pend = p.riesgos.filter((r) => r.estado === 'pendiente').length;
+    const nExc = p.riesgos.filter(excepcion).length;
+    const lista = soloExc ? p.riesgos.filter(excepcion) : p.riesgos;
     const campo = (r, k, t, filas = 3) => `<div class="campo"><label>${t}</label><textarea data-irl-r="${r.id}" data-k="${k}" rows="${filas}" ${ro || (r.estado === 'descartado' ? 'readonly' : '')}>${esc(r[k])}</textarea></div>`;
-    return `<div class="fila-flex" style="margin-bottom:12px"><span class="muted peq">${p.riesgos.length} riesgos · ${pend} por revisar. Cada riesgo necesita visto bueno, medidas y métodos de trabajo correctos. No hay aprobación en lote: se revisa uno por uno.</span>${ed ? `<button class="btn derecha" data-a="irl-r-propio" data-id="${p.id}">＋ Riesgo propio</button>` : ''}</div>
-      ${p.riesgos.map((r) => `<div class="riesgo-irl ${r.estado}">
+    return `<div class="fila-flex" style="margin-bottom:12px"><span class="muted peq">${p.riesgos.length} riesgos · ${pend} por revisar. Cada riesgo necesita visto bueno, medidas y métodos de trabajo correctos. No hay aprobación en lote: se revisa uno por uno.</span><label class="chk derecha"><input type="checkbox" data-irl-exc ${soloExc ? 'checked' : ''}> Mostrar solo excepciones (${nExc})</label>${ed ? `<button class="btn" data-a="irl-r-propio" data-id="${p.id}">＋ Riesgo propio</button>` : ''}</div>
+      ${soloExc && !lista.length ? '<div class="aviso-barra info">✓ Sin excepciones: todos los riesgos tienen visto bueno y sus textos completos (o están descartados).</div>' : ''}
+      ${lista.map((r) => `<div class="riesgo-irl ${r.estado}">
         <div class="cab-r"><div><b>${esc(r.nombre)}</b><div class="muted peq">${CAT.CAT_LABEL[r.categoria] || ''}${r.origen && r.origen.tipo === 'miper' ? ` · desde ${r.origen.filas} fila(s) de ${esc(r.origen.matrices.join(', '))}` : ' · riesgo propio'}</div></div>
           <div class="mini">${r.rcs.map((x) => `<span class="chip rc">${esc(RF.etiqueta(x))}</span>`).join('')}${r.nivel ? nivelBadge(r.nivel) : ''}${r.nivelR ? '<span class="muted peq">→</span>' + nivelBadge(r.nivelR) : ''}<span class="estado ${r.estado === 'aprobado' ? 'aprobada' : r.estado === 'descartado' ? 'borrador' : 'revision'}">${ESTADO_R[r.estado]}</span></div></div>
         ${r.cambioMiper ? '<div class="alerta-fila">⚠ Cambió en la MIPER desde la última revisión: revisa y vuelve a dar visto bueno.</div>' : ''}${r.huerfano ? '<div class="alerta-fila">⚠ Ya no aparece en las MIPER de origen.</div>' : ''}
@@ -6243,6 +6325,7 @@ const IRL = (() => {
     return true;
   }
   function onChange(el) {
+    if (el.dataset.irlExc !== undefined) { soloExc = el.checked; render(); return true; }
     const d = el.dataset;
     if (d.irl === 'area') { const p = puestoActual(); if (editable(p)) { p.area = el.value; tocar(p); render(); } return true; }
     if (d.irlChk) { const p = puestoActual(); if (editable(p)) { p[d.irlChk] = el.checked; tocar(p); } return true; }
@@ -6417,8 +6500,14 @@ const ICAM = (() => {
   const conRespaldo = (c, f) => hechosDe(c, f).some(establecido);
   const nH = (c, id) => { const i = (c.hechos || []).findIndex((h) => h.id === id); return i < 0 ? '?' : 'H' + (i + 1); };
   // Celda «Respaldo» de la tabla de hechos (paso Hechos)
-  function celdaRespaldo(h) {
-    return `<div class="respaldo-h"><select data-hecho-v="${h.id}" data-k="respaldo" aria-label="Respaldo del hecho"><option value="">Sin respaldo</option>${RESPALDOS.map((r) => `<option ${h.respaldo === r ? 'selected' : ''}>${r}</option>`).join('')}</select><label class="chk chico"><input type="checkbox" data-hecho-v="${h.id}" data-k="verif" ${establecido(h) ? 'checked' : ''}> Establecido</label></div>`;
+  // v3.8: momento del hecho respecto del evento y entrevista (solo por rol) que lo respalda
+  const MOMENTOS = { antes: 'Antes del evento', durante: 'Durante el evento', despues: 'Después del evento' };
+  const fmtF = (x) => (x ? String(x).slice(0, 10).split('-').reverse().join('-') : '');
+  const etqEntrevista = (e) => `${e.rol || 'Rol sin indicar'}${e.fecha ? ' · ' + fmtF(e.fecha) : ''}`;
+  function celdaRespaldo(h, c) {
+    const ents = (c && c.entrevistas) || [];
+    const selEnt = h.respaldo === 'Entrevista' ? `<select data-hecho-v="${h.id}" data-k="entrevista" aria-label="Entrevista que respalda el hecho"><option value="">${ents.length ? '¿Qué entrevista?' : 'Registra la entrevista abajo'}</option>${ents.map((e) => `<option value="${e.id}" ${h.entrevista === e.id ? 'selected' : ''}>${esc(etqEntrevista(e))}</option>`).join('')}</select>` : '';
+    return `<div class="respaldo-h"><select data-hecho-v="${h.id}" data-k="momento" aria-label="Momento del hecho"><option value="">Momento…</option>${Object.entries(MOMENTOS).map(([k, t]) => `<option value="${k}" ${h.momento === k ? 'selected' : ''}>${t}</option>`).join('')}</select><select data-hecho-v="${h.id}" data-k="respaldo" aria-label="Respaldo del hecho"><option value="">Sin respaldo</option>${RESPALDOS.map((r) => `<option ${h.respaldo === r ? 'selected' : ''}>${r}</option>`).join('')}</select>${selEnt}<label class="chk chico"><input type="checkbox" data-hecho-v="${h.id}" data-k="verif" ${establecido(h) ? 'checked' : ''}> Establecido</label></div>`;
   }
   const vacioIcam = () => ({ wai: '', wan: '', wad: '', brechas: '', linea: '', porques: [], factores: [], f032: {}, expediente: {} });
   const icamDe = (c) => c.icam || vacioIcam();
@@ -6653,7 +6742,7 @@ const ICAM = (() => {
     if (d.codelcoA2) { if (c) { const K = datosW(c); K.anexo2 = (K.anexo2 || []).filter((x) => x !== d.codelcoA2); if (el.checked) K.anexo2.push(d.codelcoA2); tocar(c, '', true); } return true; }
     if (d.icamEst) { if (c) { const f = icamW(c).factores.find((x) => x.id === d.icamEst); if (f) { if (el.value === 'conclusion' && !conRespaldo(c, f)) toast('Para pasar a conclusión, vincula al menos un hecho establecido.'); f.estado = el.value; } tocar(c, f ? `Factor ${f.cod}: ${EST_FAC[el.value]}` : '', true); } return true; }
     if (d.icamFh) { if (c) { const f = icamW(c).factores.find((x) => x.id === d.icamFh); if (f) { f.hechos = (f.hechos || []).filter((x) => x !== el.value); if (el.checked) f.hechos.push(el.value); } tocar(c, '', true); } return true; }
-    if (d.hechoV) { if (c) { const h = (c.hechos || []).find((x) => x.id === d.hechoV); if (h) { if (d.k === 'verif') { h.verif = el.checked ? 'establecido' : 'por-verificar'; if (el.checked && !h.respaldo) toast('Indica también el respaldo del hecho (entrevista, evidencia, registro).'); } else h.respaldo = el.value; } tocar(c, '', true); } return true; }
+    if (d.hechoV) { if (c) { const h = (c.hechos || []).find((x) => x.id === d.hechoV); if (h) { if (d.k === 'verif') { h.verif = el.checked ? 'establecido' : 'por-verificar'; if (el.checked && !h.respaldo) toast('Indica también el respaldo del hecho (entrevista, evidencia, registro).'); } else { h[d.k] = el.value; if (d.k === 'respaldo' && el.value !== 'Entrevista') delete h.entrevista; } } tocar(c, '', d.k === 'respaldo' || d.k === 'entrevista'); } return true; }
     if (d.icamDes) { if (c) { const f = icamW(c).factores.find((x) => x.id === d.icamDes); if (f) f.desencadenante = el.checked; tocar(c, '', true); } return true; }
     if (d.icamF032) { if (c) { const I = icamW(c); I.f032 = I.f032 || {}; const au = f032Auto(c)[d.icamF032]; if (au !== undefined && el.checked === au) delete I.f032[d.icamF032]; else I.f032[d.icamF032] = el.checked; tocar(c, '', true); } return true; }
     if (d.icamExp) { if (c) { const I = icamW(c); I.expediente = I.expediente || {}; I.expediente[d.icamExp] = el.checked; tocar(c, '', true); } return true; }
@@ -6682,7 +6771,7 @@ const ICAM = (() => {
   };
   A.registrar({ acciones, input: onInput, change: onChange });
 
-  return { celdaRespaldo, establecido, estF, EST_FAC, TIPOS, ANEXO2, CATEGORIAS, F032, EXPEDIENTE, calificar, tipoDe, plazo, sumarHabiles, usaIcam, validar, f032Auto, f032Estado, pCalificacion, pIcam, chipTipo, bloquesDoc, datos, icamDe };
+  return { MOMENTOS, etqEntrevista, celdaRespaldo, establecido, estF, EST_FAC, TIPOS, ANEXO2, CATEGORIAS, F032, EXPEDIENTE, calificar, tipoDe, plazo, sumarHabiles, usaIcam, validar, f032Auto, f032Estado, pCalificacion, pIcam, chipTipo, bloquesDoc, datos, icamDe };
 })();
 
 /* ============================================================
@@ -7306,7 +7395,7 @@ const INV = (() => {
         <p class="muted peq"><b>Componente</b>: individuo, tarea, material o equipo, medio o entorno, u organización y gestión. Se sugiere solo; corrígelo si no calza. Sirve para no olvidar las causas de gestión.</p>
         <p class="muted peq"><b>Respaldo</b>: con qué se verificó el hecho (observación, entrevista, evidencia, registro). Un hecho nace «por verificar»; márcalo <b>establecido</b> cuando tenga respaldo. En el ICAM, solo los hechos establecidos confirman un factor.</p>
         ${hs.length ? `<div class="hechos-scroll"><table class="t hechos"><thead><tr><th>N°</th><th>Hecho</th><th>Clasificación</th><th title="Hecho final">Lesión</th><th></th></tr></thead><tbody>${hs.map((h, i) => `<tr class="${h.rol === 'contexto' ? 'ctx' : ''}"><td>H${i + 1}</td>
-          <td><textarea rows="2" data-hecho="${h.id}" data-k="texto">${esc(h.texto)}</textarea>${h.rol === 'hecho' && RE_JUICIO.test(h.texto) ? '<div class="alerta-fila">Contiene un juicio: describe lo observable.</div>' : ''}${h.rol === 'hecho' ? ICAM.celdaRespaldo(h) : ''}</td>
+          <td><textarea rows="2" data-hecho="${h.id}" data-k="texto">${esc(h.texto)}</textarea>${h.rol === 'hecho' && RE_JUICIO.test(h.texto) ? '<div class="alerta-fila">Contiene un juicio: describe lo observable.</div>' : ''}${h.rol === 'hecho' ? ICAM.celdaRespaldo(h, c) : ''}</td>
           <td class="clasif-h"><select data-hecho="${h.id}" data-k="tipo" aria-label="Tipo"><option value="puntual" ${h.tipo === 'puntual' ? 'selected' : ''}>Puntual</option><option value="permanente" ${h.tipo === 'permanente' ? 'selected' : ''}>Permanente</option></select>
             <select data-hecho="${h.id}" data-k="comp" aria-label="Componente"><option value="">Componente…</option>${Object.entries(COMP).map(([k, t]) => `<option value="${k}" ${compDe(h) === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
             <select data-hecho="${h.id}" data-k="rol" aria-label="Rol"><option value="hecho" ${h.rol === 'hecho' ? 'selected' : ''}>Hecho</option><option value="contexto" ${h.rol === 'contexto' ? 'selected' : ''}>Contexto</option></select></td>
@@ -7314,7 +7403,23 @@ const INV = (() => {
           <td><div class="acc-h"><button class="btn chico fant" data-a="hecho-mover" data-id="${c.id}" data-h="${h.id}" data-d="-1" title="Subir">↑</button><button class="btn chico fant" data-a="hecho-mover" data-id="${c.id}" data-h="${h.id}" data-d="1" title="Bajar">↓</button><button class="btn chico fant" data-a="hecho-borrar" data-id="${c.id}" data-h="${h.id}" title="Eliminar">✕</button></div></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Aún no hay hechos.</p>'}
         <div class="fila-flex" style="margin-top:10px"><input id="nuevo-hecho" class="inp" placeholder="Agregar un hecho (Enter)" style="flex:1"><button class="btn prim" data-a="hecho-agregar" data-id="${c.id}">Agregar</button></div>
         ${c.lesionId ? '' : '<p class="alerta-fila" style="margin-top:8px">Marca cuál hecho es la lesión (columna «Lesión»).</p>'}
-      </div></div>`;
+      </div></div>
+      ${tarjetaEntrevistas(c)}`;
+  }
+
+  // v3.8 · Entrevistas registradas solo por rol (nunca nombres): respaldan hechos y van al informe
+  const RE_DATO_PERSONAL = /\b\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]\b|@|\+?56\s?9\s?\d{4}\s?\d{4}/;
+  function tarjetaEntrevistas(c) {
+    const E = c.entrevistas || [];
+    const usos = (e) => c.hechos.filter((h) => h.entrevista === e.id).length;
+    return `<div class="tarjeta entrevistas" style="margin-top:14px"><div class="fila-flex"><h2 style="margin:0">Entrevistas</h2><button class="btn derecha" data-a="entrev-agregar" data-id="${c.id}">＋ Registrar entrevista</button></div>
+      <p class="muted peq">Solo el <b>rol o cargo</b> de la persona entrevistada (por ejemplo «Operador de CAEX», «Supervisor de turno»), nunca su nombre, RUT ni teléfono. En la tabla de hechos, elige «Entrevista» como respaldo y luego cuál.</p>
+      ${E.length ? `<div class="tabla-scroll"><table class="t compacta"><thead><tr><th>Rol entrevistado</th><th>Fecha</th><th>Síntesis</th><th class="num">Hechos</th><th></th></tr></thead><tbody>${E.map((e) => `<tr>
+        <td><input class="inp" data-entrev="${e.id}" data-k="rol" value="${esc(e.rol)}" placeholder="Rol o cargo" aria-label="Rol entrevistado">${RE_DATO_PERSONAL.test(e.rol + ' ' + e.sintesis) ? '<div class="alerta-fila">Parece tener un RUT, correo o teléfono: quítalo.</div>' : ''}</td>
+        <td><input type="date" class="inp" data-entrev="${e.id}" data-k="fecha" value="${esc(e.fecha || '')}" aria-label="Fecha de la entrevista"></td>
+        <td><textarea rows="2" data-entrev="${e.id}" data-k="sintesis" placeholder="Qué aportó (sin juicios ni nombres)" aria-label="Síntesis">${esc(e.sintesis || '')}</textarea></td>
+        <td class="num">${usos(e)}</td><td><button class="btn chico fant" data-a="entrev-borrar" data-id="${c.id}" data-e="${e.id}" title="Eliminar entrevista">✕</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">Aún no hay entrevistas registradas.</p>'}
+    </div>`;
   }
 
   // Cobertura: cada oración del relato con su destino (hecho, contexto, ignorada o pendiente)
@@ -7561,10 +7666,14 @@ const INV = (() => {
     if (Tc && /ICAM/.test(Tc.metodo)) bloques.push({ t: 'p', texto: `Codelco califica este evento como «${Tc.t}» (SIGO-ET-001) y lo investiga con ${Tc.metodo} (SIGO-ET-002 / SIGO-P-003): comparación del trabajo como está previsto, como se hace normalmente y como se hizo (WAI / WAN / WAD), 5 porqués y clasificación de los factores en las 4 categorías del diagrama ICAM. El detalle va en la sección de análisis.` });
     bloques.push({ t: 'h1', texto: '3. Hechos' });
     // La columna «Respaldo» solo aparece si el caso la usa (los informes emitidos antes de la v3.6 quedan como se firmaron)
-    const conResp = hs.some((h) => h.verif || h.respaldo);
-    if (conResp) bloques.push({ t: 'tabla', anchos: [0.6, 4.2, 1.1, 1.4, 1.5], filas: [['N°', 'Hecho', 'Tipo', 'Componente', 'Respaldo'], ...hs.map((h) => [`H${idx.get(h.id)}`, h.id === d.lesionId ? [{ t: h.texto, b: true }, { t: '  (lesión)', color: 'CD2017', b: true }] : h.texto, h.tipo === 'permanente' ? 'Permanente' : 'Puntual', COMP[compDe(h)] || '—', ICAM.establecido(h) ? (h.respaldo || 'Establecido') : `Por verificar${h.respaldo ? ' · ' + h.respaldo : ''}`])] });
+    const conResp = hs.some((h) => h.verif || h.respaldo || h.momento);
+    const entMap = new Map((d.entrevistas || []).map((e) => [e.id, e]));
+    const txtResp = (h) => { const base = ICAM.establecido(h) ? (h.respaldo || 'Establecido') : `Por verificar${h.respaldo ? ' · ' + h.respaldo : ''}`; const e = h.entrevista && entMap.get(h.entrevista); const mo = h.momento && ICAM.MOMENTOS[h.momento]; return [base + (e ? ` (${ICAM.etqEntrevista(e)})` : ''), mo].filter(Boolean).join(' · '); };
+    if (conResp) bloques.push({ t: 'tabla', anchos: [0.6, 4.2, 1.1, 1.4, 1.5], filas: [['N°', 'Hecho', 'Tipo', 'Componente', 'Respaldo'], ...hs.map((h) => [`H${idx.get(h.id)}`, h.id === d.lesionId ? [{ t: h.texto, b: true }, { t: '  (lesión)', color: 'CD2017', b: true }] : h.texto, h.tipo === 'permanente' ? 'Permanente' : 'Puntual', COMP[compDe(h)] || '—', txtResp(h)])] });
     else bloques.push({ t: 'tabla', anchos: [0.6, 5, 1.2, 1.6], filas: [['N°', 'Hecho', 'Tipo', 'Componente'], ...hs.map((h) => [`H${idx.get(h.id)}`, h.id === d.lesionId ? [{ t: h.texto, b: true }, { t: '  (lesión)', color: 'CD2017', b: true }] : h.texto, h.tipo === 'permanente' ? 'Permanente' : 'Puntual', COMP[compDe(h)] || '—'])] });
     if (ctx.length) { bloques.push({ t: 'h3', texto: 'Antecedentes de contexto (no forman parte del árbol)' }); bloques.push({ t: 'lista', items: ctx.map((h) => h.texto) }); }
+    const ents = (d.entrevistas || []).filter((e) => e.rol || e.sintesis);
+    if (ents.length) { bloques.push({ t: 'h3', texto: 'Entrevistas (registradas por rol)' }); bloques.push({ t: 'tabla', anchos: [2, 1.1, 4.3], filas: [['Rol entrevistado', 'Fecha', 'Síntesis'], ...ents.map((e) => [e.rol || '—', e.fecha ? fmtFecha(e.fecha) : '—', e.sintesis || '—'])] }); }
     // árbol en hoja horizontal
     bloques.push({ t: 'seccion', horizontal: true });
     bloques.push({ t: 'h1', texto: '4. Árbol de causas' });
@@ -7764,6 +7873,23 @@ const INV = (() => {
       if (!ok) return;
       const n = c.informes.length || null;
       descargar(await docInforme(c, n, { difusion: true, reemplazos: lista }), nombreArchivo(`Informe ${c.folio} difusion${n ? ' v' + n : ' BORRADOR'}.docx`));
+    },
+    'entrev-agregar': (el, ds) => {
+      const c = cid(ds);
+      c.entrevistas = c.entrevistas || [];
+      c.entrevistas.push({ id: uid(), rol: '', fecha: hoyISO(), sintesis: '' });
+      tocar(c, 'Registra una entrevista'); render();
+      const inps = $$('[data-entrev][data-k="rol"]'); if (inps.length) inps[inps.length - 1].focus();
+    },
+    'entrev-borrar': async (el, ds) => {
+      const c = cid(ds);
+      const e = (c.entrevistas || []).find((x) => x.id === ds.e);
+      if (!e) return;
+      const n = c.hechos.filter((h) => h.entrevista === e.id).length;
+      if (!(await confirmar('Eliminar entrevista', `Se eliminará la entrevista «${esc(e.rol || 'sin rol')}».${n ? ` ${n} hecho(s) la usan como respaldo: quedarán con respaldo «Entrevista» sin indicar cuál.` : ''}`, 'Eliminar', 'peligro'))) return;
+      c.entrevistas = c.entrevistas.filter((x) => x.id !== e.id);
+      c.hechos.forEach((h) => { if (h.entrevista === e.id) delete h.entrevista; });
+      tocar(c, 'Elimina una entrevista'); render();
     },
     'hecho-agregar': (el, ds) => {
       const c = cid(ds);
@@ -7980,6 +8106,7 @@ const INV = (() => {
   function onInput(el) {
     const d = el.dataset;
     if (d.evid !== undefined) { const c = casoActual(); const e = c && (c.evidencias || []).find((x) => x.id === d.evid); if (e) { e.nota = el.value; tocar(c); } return true; }
+    if (d.entrev !== undefined) { if (el.type === 'date') return true; const c = casoActual(); const e = c && (c.entrevistas || []).find((x) => x.id === d.entrev); if (e) { e[d.k] = el.value; tocar(c); } return true; }
     if (d.caso === undefined && d.casoTrab === undefined && d.hecho === undefined && d.med === undefined && d.calif === undefined) return false;
     const c = casoActual();
     if (!c) return true;
@@ -7995,6 +8122,7 @@ const INV = (() => {
   function onChange(el) {
     const d = el.dataset;
     const c = casoActual();
+    if (d.entrev !== undefined) { const e = c && (c.entrevistas || []).find((x) => x.id === d.entrev); if (e) { e[d.k] = el.value; tocar(c); if (d.k === 'rol' || d.k === 'fecha') render(); } return true; }
     if (d.lesion) { if (c) { c.lesionId = d.lesion; tocarArbol(c, 'Marca la lesión'); render(); } return true; }
     if (d.medCausa) { if (c) { const m = c.medidas.find((x) => x.id === d.medCausa); if (el.checked) { if (!m.causas.includes(el.value)) m.causas.push(el.value); } else m.causas = m.causas.filter((x) => x !== el.value); tocar(c); } return true; }
     if (d.casoCtl) { if (c) { c.controles[d.casoCtl] = el.value; tocar(c); } return true; }
@@ -8031,7 +8159,15 @@ const INV = (() => {
     acciones, input: onInput, change: onChange,
     contadores: { casos: () => st.casos.filter((c) => !c.informes.length).length, seguimiento: () => st.casos.reduce((a, c) => a + c.medidas.filter(vencida).length, 0) },
   });
-  return { proponerHechos, dividirRelato, deducirDatos, reemplazosDifusion, anonimizar, obligaciones, sugerirComp, validarArbol, validarCaso, layout, svgArbol, sha256, sha256js, docInforme, resumenGlobal, alcanzables };
+  // v3.8: caso creado desde otra parte de la plataforma (p. ej. una observación de terreno)
+  function crearCaso(titulo, fecha, extra = {}, accion = '') {
+    const c = nuevoCaso(titulo, fecha);
+    Object.assign(c, extra);
+    if (accion) c.registro.push({ fecha: new Date().toISOString(), usuario: usuarioTxt(), accion });
+    st.casos.push(c);
+    return c;
+  }
+  return { crearCaso, EVENTOS, proponerHechos, dividirRelato, deducirDatos, reemplazosDifusion, anonimizar, obligaciones, sugerirComp, validarArbol, validarCaso, layout, svgArbol, sha256, sha256js, docInforme, resumenGlobal, alcanzables };
 })();
 
 /* ============================================================
@@ -8078,6 +8214,7 @@ const GES = (() => {
     if (m.plazo < hoy()) return 'vencida';
     return dias(hoy(), m.plazo) <= POR_VENCER ? 'porvencer' : 'enplazo';
   }
+  const ESTANCADA_DIAS = 30;
   const EST_MED_TXT = { verificada: 'Verificada eficaz', implementada: 'Implementada · sin verificar', sinplazo: 'Abierta · sin plazo', vencida: 'Vencida', porvencer: 'Por vencer', enplazo: 'En plazo' };
   const enArea = (x) => !F.area || (x.area || '') === F.area;
   function areas() {
@@ -8212,7 +8349,13 @@ const GES = (() => {
       const firma = (k) => ((m.firmas && m.firmas[k]) || []).map((x) => x.nombre).filter(Boolean)[0] || '';
       if (i.vencida) add({ modulo: 'MIPER', area: m.area, prioridad: 'Alta', titulo: `Revisar MIPER «${m.nombre}»`, detalle: `Más de 12 meses desde la última revisión registrada (${fmtFecha(i.fu)}). Criterio de seguimiento de la herramienta.`, plazo: i.limite, accion: 'Revisar MIPER', h: `m/${m.id}/resumen` });
       else if (i.proxima) add({ modulo: 'MIPER', area: m.area, prioridad: 'Media', titulo: `Programar revisión de la MIPER «${m.nombre}»`, detalle: `Cumple 12 meses desde la última revisión el ${fmtFecha(i.limite)}.`, plazo: i.limite, accion: 'Revisar MIPER', h: `m/${m.id}/resumen` });
-      if (m.estado === 'borrador') add({ modulo: 'MIPER', area: m.area, prioridad: 'Media', titulo: `Completar la MIPER «${m.nombre}» rev. ${m.revision}`, detalle: 'En borrador: completar y enviar a revisión.', responsable: firma('realizado'), accion: 'Completar MIPER', h: `m/${m.id}/revision` });
+      if (m.estado === 'borrador') {
+        // v3.8: borrador sin cambios hace 30 días o más (última edición, registro o creación)
+        const ult = [m.actualizada, m.creada, ...(m.registro || []).map((x) => x.fecha)].filter(Boolean).sort().pop();
+        const d = MOD.diasDesde(ult);
+        if (d !== null && d >= ESTANCADA_DIAS) add({ modulo: 'MIPER', area: m.area, prioridad: 'Media', titulo: `MIPER «${m.nombre}» en borrador sin cambios hace ${d} días`, detalle: `Último cambio: ${fmtFecha(ult)}. Retómala y envíala a revisión, o elimínala si ya no se usará.`, responsable: firma('realizado'), accion: 'Retomar MIPER', h: `m/${m.id}/revision` });
+        else add({ modulo: 'MIPER', area: m.area, prioridad: 'Media', titulo: `Completar la MIPER «${m.nombre}» rev. ${m.revision}`, detalle: 'En borrador: completar y enviar a revisión.', responsable: firma('realizado'), accion: 'Completar MIPER', h: `m/${m.id}/revision` });
+      }
       if (m.estado === 'revision') add({ modulo: 'MIPER', area: m.area, prioridad: 'Media', titulo: `Aprobar o devolver la MIPER «${m.nombre}» rev. ${m.revision}`, detalle: 'Enviada a revisión.', responsable: firma('aprobado'), accion: 'Revisar MIPER', h: `m/${m.id}/revision` });
     }
     // Protocolos MINSAL: por MIPER y protocolo (sin resultado registrado o reevaluación vencida)
@@ -8238,6 +8381,7 @@ const GES = (() => {
     // Ejecución en terreno: programa de trabajo, PTS, condiciones de terreno y cambios en obra
     if (typeof PRG !== 'undefined') PRG.pendientes(add);
     if (typeof BIB !== 'undefined') BIB.pendientes(add);
+    if (typeof TER !== 'undefined') TER.pendientes(add);
     // IRL
     for (const p of st.irl.puestos) {
       IRL.cambiosMiper(p).forEach((c) => add({ modulo: 'IRL', area: p.area, prioridad: 'Alta', titulo: `Actualizar el IRL «${p.nombre}»`, detalle: `Su MIPER «${c.nombre}» cambió (rev. ${c.de} → ${c.a}).`, accion: 'Actualizar IRL', h: `irl-p/${p.id}/puesto` }));
@@ -8751,7 +8895,7 @@ const GES = (() => {
     },
   });
 
-  return { tabla, kpi, kpisIRL, vigenciaIRL, kpisInv, tablaMedidas, resumenPortada, pendientesPortada, pendientes, filtroArea, datos, estMedida, coberturaNomina, validarFilas, leerNomina, chipEntrega, F, POR_VENCER, REV_DIAS };
+  return { ESTANCADA_DIAS, tabla, kpi, kpisIRL, vigenciaIRL, kpisInv, tablaMedidas, resumenPortada, pendientesPortada, pendientes, filtroArea, datos, estMedida, coberturaNomina, validarFilas, leerNomina, chipEntrega, F, POR_VENCER, REV_DIAS };
 })();
 
 /* ============================================================
@@ -8835,7 +8979,7 @@ const PRG = (() => {
       }
       for (const l of lineas(f.adicionales)) push({ key: claveAd(f, l), m, f, t, tipo: 'Adicional', rf: '', cc: '', texto: limpiaLinea(l), brechas: 0, prioSug: prioFila(f) });
     }
-    for (const e of m.programa.extra) push({ key: e.key, m, f: null, t: tmap.get(e.tareaId) || {}, tipo: 'Brecha', rf: e.rf, cc: e.cc, texto: e.texto, ref: e.ref, brechas: 1, prioSug: 'Alta' });
+    for (const e of m.programa.extra) { const obs = e.origen === 'observacion'; push({ key: e.key, m, f: null, t: tmap.get(e.tareaId) || {}, tipo: obs ? 'Observación de terreno' : 'Brecha', rf: e.rf, cc: e.cc, texto: e.texto, ref: e.ref, brechas: obs ? 0 : 1, prioSug: obs ? 'Media' : 'Alta' }); }
     return out;
   }
   const EST = { porPlanificar: 'Por planificar', planificada: 'En seguimiento', implementada: 'Implementación declarada', verificada: 'Verificada en terreno', noAplica: 'No es una acción' };
@@ -9944,6 +10088,419 @@ const BIB = (() => {
 })();
 
 /* ============================================================
+   terreno.js — v3.8 (ideas del Centro de control ChileSST, adaptadas a ICV-DMH, sin IA)
+   · Observaciones de terreno: hallazgo rápido SIN nombres (observación, incidente,
+     cuasi accidente). No reemplaza el reporte ni la investigación: desde aquí se
+     deriva a una investigación, a una fila de la MIPER (condición de terreno) o a
+     una medida del programa de trabajo. Datos en st.obs.
+   · Agenda de vencimientos: medidas del programa, medidas de investigación y
+     reentregas de IRL agrupadas por responsable o por área.
+   · Primer recorrido (portada): cómo se conecta un riesgo de la MIPER con su medida,
+     su PTS, el IRL del puesto y la investigación, con los datos reales del navegador.
+   ============================================================ */
+const TER = (() => {
+  'use strict';
+  const A = window.APP;
+  const { st, esc, toast, modal, confirmar, guardar, render, ir, fmtFecha, hoyISO, usuarioTxt, icono, pref } = A;
+  const uid = () => MOD.uid();
+  const TIPOS = { observacion: 'Observación de terreno', incidente: 'Incidente', cuasi: 'Cuasi accidente' };
+  const EST_OBS = { abierta: 'Abierta', derivada: 'Derivada', cerrada: 'Cerrada' };
+  const RE_PERSONAL = /\b\d{1,2}\.?\d{3}\.?\d{3}-[\dkK]\b|[\w.+-]+@[\w-]+\.\w+|\+?56\s?9\s?\d{4}\s?\d{4}|\b9\s?\d{4}\s?\d{4}\b/;
+  const hoy = () => hoyISO();
+  const dias = (a, b) => Math.round((Date.parse(b + 'T12:00:00') - Date.parse(a + 'T12:00:00')) / 86400000);
+  const corto = (s, n = 80) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+
+  // ============================================================
+  //  OBSERVACIONES DE TERRENO
+  // ============================================================
+  const obsDe = (id) => st.obs.find((o) => o.id === id);
+  function nuevoFolio() {
+    const n = st.obs.reduce((mx, o) => Math.max(mx, +(String(o.folio || '').replace(/\D/g, '')) || 0), 0) + 1;
+    return 'OBS-' + String(n).padStart(4, '0');
+  }
+  const areas = () => [...new Set([...st.matrices.map((m) => m.area), ...st.casos.map((c) => c.area), ...st.obs.map((o) => o.area)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+
+  async function editarObs(o) {
+    const nueva = !o;
+    o = o || { tipo: 'observacion', que: '', lugar: '', area: '', accion: '', fecha: hoy() };
+    const r = await modal({
+      titulo: nueva ? 'Registrar observación de terreno' : `Editar ${o.folio}`,
+      html: `<p class="aviso-barra info peq">No escribas nombres de personas, RUT, teléfonos, correos ni datos de salud. Describe lo observable, sin juicios.</p>
+        <div class="rejilla" style="gap:10px">
+        <div class="rejilla r2"><div class="campo"><label>Tipo *</label><select data-campo-modal="tipo">${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}" ${o.tipo === k ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+          <div class="campo"><label>Fecha del hecho</label><input type="date" data-campo-modal="fecha" value="${esc(o.fecha || '')}"></div></div>
+        <div class="campo"><label>Qué se observó *</label><textarea data-campo-modal="que" rows="4" placeholder="Ej.: Camión pluma izando estructura sin vientos y con personas bajo la carga en la nave de chancado.">${esc(o.que)}</textarea></div>
+        <div class="rejilla r2"><div class="campo"><label>Lugar o centro de trabajo</label><input data-campo-modal="lugar" value="${esc(o.lugar)}" placeholder="Ej.: Botadero norte"></div>
+          <div class="campo"><label>Área</label><input data-campo-modal="area" list="dl-obs-area" value="${esc(o.area || '')}" placeholder="Ej.: Operaciones"><datalist id="dl-obs-area">${areas().map((a) => `<option value="${esc(a)}">`).join('')}</datalist></div></div>
+        <div class="campo"><label>Acción sugerida</label><textarea data-campo-modal="accion" rows="2" placeholder="Qué habría que hacer (opcional)">${esc(o.accion)}</textarea></div>
+        <span class="err-modal alerta-fila"></span></div>`,
+      botones: [{ texto: 'Cancelar', valor: null }, { texto: nueva ? 'Registrar' : 'Guardar', clase: 'prim', valor: 'datos', validar: (d) => {
+        if (!d.que.trim()) return { campo: 'que', msg: 'Falta «Qué se observó».' };
+        for (const k of ['que', 'lugar', 'accion']) if (RE_PERSONAL.test(d[k])) return { campo: k, msg: 'Parece tener un RUT, correo o teléfono. Quítalo: la observación se registra sin datos personales.' };
+        return null;
+      } }],
+    });
+    if (!r) return null;
+    const ahora = new Date().toISOString();
+    Object.assign(o, { tipo: r.tipo, que: r.que.trim(), lugar: r.lugar.trim(), area: r.area.trim(), accion: r.accion.trim(), fecha: r.fecha || '' });
+    if (nueva) {
+      Object.assign(o, { id: uid(), folio: nuevoFolio(), estado: 'abierta', destino: null, creado: ahora, usuario: usuarioTxt(), registro: [{ fecha: ahora, usuario: usuarioTxt(), accion: 'Registra la observación' }] });
+      st.obs.unshift(o);
+    } else o.registro.push({ fecha: ahora, usuario: usuarioTxt(), accion: 'Edita la observación' });
+    o.actualizado = ahora;
+    await guardar(true);
+    return o;
+  }
+
+  function destinoHtml(o) {
+    const d = o.destino;
+    if (!d) return '<span class="muted">—</span>';
+    if (d.tipo === 'caso') { const c = st.casos.find((x) => x.id === d.id); return c ? `<a href="#/caso/${c.id}/antecedentes">Investigación ${esc(c.folio)}</a>` : '<span class="muted">Investigación eliminada</span>'; }
+    const m = A.matriz(d.mId);
+    if (!m) return '<span class="muted">MIPER eliminada</span>';
+    return d.tipo === 'miper' ? `<a href="#/m/${m.id}/matriz">Condición de terreno en «${esc(corto(m.nombre, 40))}»</a>` : `<a href="#/m/${m.id}/terreno/programa">Medida en «${esc(corto(m.nombre, 40))}»</a>`;
+  }
+  const chipObs = (o) => `<span class="estado ${o.estado === 'abierta' ? 'revision' : o.estado === 'derivada' ? 'aprobada' : 'borrador'}">${EST_OBS[o.estado]}</span>`;
+
+  function vObs() {
+    const filtro = pref.get('obs-filtro') || 'abiertas';
+    const lista = st.obs.filter((o) => filtro === 'todas' || (filtro === 'abiertas' ? o.estado === 'abierta' : o.estado !== 'abierta'));
+    const n = { abierta: st.obs.filter((o) => o.estado === 'abierta').length, derivada: st.obs.filter((o) => o.estado === 'derivada').length, cerrada: st.obs.filter((o) => o.estado === 'cerrada').length };
+    const acciones = (o) => o.estado === 'abierta'
+      ? `<div class="fila-flex obs-acc"><button class="btn chico prim" data-a="obs-investigar" data-o="${o.id}">Investigar</button><button class="btn chico" data-a="obs-miper" data-o="${o.id}" ${st.matrices.length ? '' : 'disabled title="No hay MIPER cargadas"'}>Llevar a una MIPER</button><button class="btn chico" data-a="obs-medida" data-o="${o.id}" ${st.matrices.length ? '' : 'disabled title="No hay MIPER cargadas"'}>Agregar medida</button><button class="btn chico" data-a="obs-cerrar" data-o="${o.id}">Cerrar</button><button class="btn chico fant" data-a="obs-editar" data-o="${o.id}" title="Editar">Editar</button></div>`
+      : `<div class="fila-flex obs-acc"><button class="btn chico" data-a="obs-reabrir" data-o="${o.id}">Reabrir</button><button class="btn chico fant" data-a="obs-borrar" data-o="${o.id}" title="Eliminar">✕</button></div>`;
+    return `<div class="cabecera"><div><h1>Observaciones de terreno</h1><p>Hallazgos registrados en terreno, sin nombres. No reemplazan el reporte ni la investigación formal: desde aquí se derivan a una investigación, a una fila de la MIPER o al programa de trabajo.</p></div>
+        <div class="acciones"><button class="btn prim" data-a="obs-nueva">${icono('ampolleta')}Registrar observación</button></div></div>
+      <div class="rejilla r3 kpi-obs">
+        <div class="tarjeta kpi ${n.abierta ? 'alerta' : ''}"><div class="v">${n.abierta}</div><div class="e">abiertas, por derivar o cerrar</div></div>
+        <div class="tarjeta kpi"><div class="v">${n.derivada}</div><div class="e">derivadas a investigación, MIPER o programa</div></div>
+        <div class="tarjeta kpi"><div class="v">${n.cerrada}</div><div class="e">cerradas</div></div></div>
+      <div class="tarjeta" style="margin-top:14px">
+        <div class="barra-filtros" role="group" aria-label="Filtro de observaciones"><div class="campo"><label>Mostrar</label><select data-obs-filtro><option value="abiertas" ${filtro === 'abiertas' ? 'selected' : ''}>Abiertas</option><option value="cerradas" ${filtro === 'cerradas' ? 'selected' : ''}>Derivadas y cerradas</option><option value="todas" ${filtro === 'todas' ? 'selected' : ''}>Todas</option></select></div></div>
+        ${lista.length ? `<div class="obs-lista">${lista.map((o) => `<article class="obs-item ${o.estado}">
+            <div class="obs-cab"><b>${esc(o.folio)}</b><span class="chip ${o.tipo === 'observacion' ? 'gris' : 'ambar'}">${TIPOS[o.tipo]}</span>${chipObs(o)}<span class="muted peq derecha">${o.fecha ? fmtFecha(o.fecha) : 'Sin fecha'}${o.lugar ? ' · ' + esc(o.lugar) : ''}${o.area ? ' · ' + esc(o.area) : ''}</span></div>
+            <p class="obs-que">${esc(o.que)}</p>
+            ${o.accion ? `<p class="peq"><b>Acción sugerida:</b> ${esc(o.accion)}</p>` : ''}
+            ${o.destino ? `<p class="peq"><b>Derivada a:</b> ${destinoHtml(o)}</p>` : ''}${o.cierre ? `<p class="peq"><b>Cierre:</b> ${esc(o.cierre.nota)} <span class="muted">(${esc(o.cierre.por)}, ${fmtFecha(o.cierre.fecha)})</span></p>` : ''}
+            ${acciones(o)}</article>`).join('')}</div>` : `<div class="vacio"><b>${st.obs.length ? 'Sin observaciones con este filtro' : 'Aún no hay observaciones'}</b>Registra lo que veas en terreno: una condición, un incidente o un cuasi accidente. Después decides si va a investigación, a la MIPER o al programa de trabajo.</div>`}
+      </div>`;
+  }
+
+  async function elegirMatriz(titulo, ayuda, extraHtml = '', validarExtra) {
+    const M = st.matrices.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    return modal({
+      titulo,
+      html: `<p class="peq">${ayuda}</p><div class="campo"><label>MIPER</label><select data-campo-modal="mId">${M.map((m) => `<option value="${m.id}">${esc(m.nombre)} · rev. ${esc(m.revision)} (${esc(m.estado)})</option>`).join('')}</select></div>${extraHtml}<span class="err-modal alerta-fila"></span>`,
+      botones: [{ texto: 'Cancelar', valor: null }, { texto: 'Continuar', clase: 'prim', valor: 'datos', validar: validarExtra }],
+    });
+  }
+  function marcarDerivada(o, destino, accion) {
+    const ahora = new Date().toISOString();
+    o.estado = 'derivada'; o.destino = destino; o.actualizado = ahora;
+    o.registro.push({ fecha: ahora, usuario: usuarioTxt(), accion });
+  }
+
+  const acciones = {
+    'obs-nueva': async () => { const o = await editarObs(null); if (o) { if (A.ruta().vista !== 'obs') ir('obs'); else render(); toast(`${o.folio} registrada. Derívala a una investigación, a la MIPER o al programa, o ciérrala.`, 4500); } },
+    'obs-editar': async (el, ds) => { const o = obsDe(ds.o); if (o && (await editarObs(o))) render(); },
+    'obs-investigar': async (el, ds) => {
+      const o = obsDe(ds.o); if (!o) return;
+      const ok = await confirmar('Abrir una investigación', `<p>Se creará un caso de investigación con lo registrado en <b>${esc(o.folio)}</b> (qué se observó, lugar, área y fecha). Lo completas en el módulo Investigación.</p>`, 'Crear caso');
+      if (!ok) return;
+      const evento = o.tipo === 'observacion' ? 'Incidente sin lesión' : (INV.EVENTOS.includes('Incidente sin lesión') ? 'Incidente sin lesión' : INV.EVENTOS[0]);
+      const relato = [o.que, o.lugar ? `Lugar: ${o.lugar}.` : '', o.accion ? `Acción sugerida en terreno: ${o.accion}` : ''].filter(Boolean).join('\n');
+      const c = INV.crearCaso(`${TIPOS[o.tipo]}: ${corto(o.que, 70)}`, o.fecha || hoy(), { lugar: o.lugar, area: o.area || 'Operaciones', relato, evento, origenObs: o.id }, `Crea el caso desde la observación ${o.folio}`);
+      marcarDerivada(o, { tipo: 'caso', id: c.id, folio: c.folio }, `Deriva a la investigación ${c.folio}`);
+      await guardar(true);
+      ir(`caso/${c.id}/antecedentes`);
+      toast(`Caso ${c.folio} creado desde ${o.folio}.`, 4000);
+    },
+    'obs-miper': async (el, ds) => {
+      const o = obsDe(ds.o); if (!o || !st.matrices.length) return;
+      const r1 = await elegirMatriz('Llevar a una MIPER', 'La fila elegida queda con una <b>condición de terreno</b> por revisar: la MIPER no se puede aprobar hasta que alguien la revise.');
+      if (!r1) return;
+      const m = A.matriz(r1.mId); if (!m) return;
+      if (!m.filas.length) { toast('Esa MIPER no tiene filas. Usa «Agregar medida» o elige otra.', 4500); return; }
+      const tmap = new Map(m.tareas.map((t) => [t.id, t]));
+      const r2 = await modal({
+        titulo: `Fila de «${corto(m.nombre, 50)}»`,
+        html: `<p class="peq">¿A qué peligro corresponde lo observado?</p><div class="campo"><label>Fila</label><select data-campo-modal="filaId">${m.filas.map((f) => `<option value="${f.id}">${esc(corto((tmap.get(f.tareaId) || {}).tarea || 'Sin tarea', 50))} · ${esc(corto(f.peligro || '(sin peligro)', 70))}</option>`).join('')}</select></div>`,
+        botones: [{ texto: 'Cancelar', valor: null }, { texto: 'Informar condición', clase: 'prim', valor: 'datos' }],
+      });
+      if (!r2) return;
+      m.alertasFila = m.alertasFila || [];
+      m.alertasFila.push({ id: uid(), filaId: r2.filaId, tipo: 'terreno', texto: `${o.folio}: ${o.que}`, fecha: new Date().toISOString(), usuario: usuarioTxt(), origen: 'obs|' + o.id, resuelta: false });
+      marcarDerivada(o, { tipo: 'miper', mId: m.id, filaId: r2.filaId }, `Informa condición de terreno en la MIPER «${m.nombre}»`);
+      await guardar(true); render();
+      toast(`Condición de terreno informada en «${m.nombre}». La fila queda marcada hasta revisarla.`, 4500);
+    },
+    'obs-medida': async (el, ds) => {
+      const o = obsDe(ds.o); if (!o || !st.matrices.length) return;
+      const r = await elegirMatriz('Agregar una medida al programa de trabajo', 'La medida entra al programa de trabajo de la MIPER elegida, para darle quién la ejecuta, plazo y verificación en terreno.',
+        `<div class="campo"><label>Medida</label><textarea data-campo-modal="texto" rows="3">${esc(o.accion || o.que)}</textarea></div>`,
+        (d) => (!d.texto.trim() ? { campo: 'texto', msg: 'Falta la medida.' } : null));
+      if (!r) return;
+      const m = A.matriz(r.mId); if (!m) return;
+      m.programa = m.programa || { acciones: {}, extra: [] };
+      m.programa.extra = m.programa.extra || [];
+      const key = 'obs|' + o.id;
+      if (!m.programa.extra.some((e) => e.key === key)) m.programa.extra.push({ key, ref: key, rf: '', cc: '', texto: `${o.folio}: ${r.texto.trim()}`, origen: 'observacion', tareaId: '' });
+      marcarDerivada(o, { tipo: 'medida', mId: m.id, key }, `Agrega una medida al programa de «${m.nombre}»`);
+      await guardar(true); render();
+      toast(`Medida agregada al programa de trabajo de «${m.nombre}».`, 4000);
+    },
+    'obs-cerrar': async (el, ds) => {
+      const o = obsDe(ds.o); if (!o) return;
+      const nota = await A.pedirTexto(`Cerrar ${o.folio}`, 'Motivo del cierre', '', 'Ej.: corregido en el momento por el supervisor; no requiere más acciones.');
+      if (!nota) return;
+      const ahora = new Date().toISOString();
+      o.estado = 'cerrada'; o.cierre = { fecha: ahora, por: usuarioTxt(), nota }; o.actualizado = ahora;
+      o.registro.push({ fecha: ahora, usuario: usuarioTxt(), accion: 'Cierra: ' + nota });
+      await guardar(true); render();
+    },
+    'obs-reabrir': async (el, ds) => {
+      const o = obsDe(ds.o); if (!o) return;
+      const ahora = new Date().toISOString();
+      o.estado = 'abierta'; o.cierre = null; o.actualizado = ahora;
+      o.registro.push({ fecha: ahora, usuario: usuarioTxt(), accion: 'Reabre la observación' + (o.destino ? ' (lo derivado se mantiene)' : '') });
+      await guardar(true); render();
+    },
+    'obs-borrar': async (el, ds) => {
+      const o = obsDe(ds.o); if (!o) return;
+      if (!(await confirmar('Eliminar observación', `Se eliminará ${esc(o.folio)}. Lo que ya se derivó (caso, condición de terreno o medida) no se borra.`, 'Eliminar', 'peligro'))) return;
+      st.obs = st.obs.filter((x) => x.id !== o.id);
+      await guardar(true); render();
+    },
+    // ---------- agenda ----------
+    'ag-grupo': (el, ds) => { pref.set('agenda-grupo', ds.g); render(); },
+    // ---------- recorrido ----------
+    'guia-ocultar': () => { pref.set('guia-oculta', '1'); render(); },
+    'guia-mostrar': () => { pref.set('guia-oculta', ''); render(); },
+  };
+  function onChange(el) {
+    if (el.dataset.obsFiltro !== undefined) { pref.set('obs-filtro', el.value); render(); return true; }
+    if (el.dataset.agFiltro !== undefined) { pref.set('agenda-' + el.dataset.agFiltro, el.value); render(); return true; }
+    if (el.dataset.guiaM !== undefined) { pref.set('guia-m', el.value); render(); return true; }
+    return false;
+  }
+
+  // ============================================================
+  //  AGENDA DE VENCIMIENTOS
+  // ============================================================
+  function itemsAgenda() {
+    const out = [];
+    const POR = GES.POR_VENCER || 7;
+    const estPlazo = (plazo) => (!plazo ? 'sinplazo' : plazo < hoy() ? 'vencida' : dias(hoy(), plazo) <= POR ? 'porvencer' : 'enplazo');
+    for (const m of st.matrices) {
+      if (!m.programa && !(m.filas || []).length) continue;
+      for (const x of PRG.medidas(m)) {
+        const e = PRG.estado(m, x.key), a = PRG.accion(m, x.key);
+        if (!a || e === 'verificada' || e === 'noAplica') continue;
+        if (e === 'porPlanificar' && !a.ejecutor && !a.plazo) continue;
+        const verif = e === 'implementada';
+        out.push({ origen: 'Programa de trabajo', area: m.area || '', responsable: (verif ? a.verificador : a.ejecutor) || '', plazo: verif ? '' : a.plazo || '', est: verif ? 'verificar' : estPlazo(a.plazo), que: `${verif ? 'Verificar en terreno: ' : ''}${x.texto}`, ref: `«${m.nombre}»${x.t && x.t.tarea ? ' · ' + x.t.tarea : ''}`, h: `m/${m.id}/terreno/programa` });
+      }
+    }
+    for (const c of st.casos) {
+      c.medidas.forEach((md, i) => {
+        const e = GES.estMedida(md);
+        if (e === 'verificada') return;
+        const verif = e === 'implementada';
+        out.push({ origen: 'Investigación', area: c.area || '', responsable: md.responsable || '', plazo: verif ? '' : md.plazo || '', est: verif ? 'verificar' : e, que: `${verif ? 'Verificar eficacia: ' : ''}${md.texto || '(sin descripción)'}`, ref: `${c.folio} · medida ${i + 1}`, h: `caso/${c.id}/medidas` });
+      });
+    }
+    for (const p of st.irl.puestos) {
+      if (!p.revision) continue;
+      IRL.personas(p).forEach(({ e, estado }) => {
+        if (estado !== 'reinformar' && estado !== 'firma') return;
+        out.push({ origen: 'IRL', area: p.area || '', responsable: e.relator || '', plazo: '', est: estado === 'reinformar' ? 'reinformar' : 'firma', que: estado === 'reinformar' ? `Reinformar el IRL «${p.nombre}» (rev. ${p.revision})` : `Completar la firma del IRL «${p.nombre}»`, ref: e.persona, h: `irl-p/${p.id}/entregas` });
+      });
+    }
+    return out;
+  }
+  const EST_AG = { vencida: ['rojo', 'Vencida'], porvencer: ['ambar', 'Por vencer'], enplazo: ['verde', 'En plazo'], sinplazo: ['gris', 'Sin plazo'], verificar: ['azul', 'Por verificar'], reinformar: ['ambar', 'Por reinformar'], firma: ['gris', 'Falta firma'] };
+  const ORD_EST = { vencida: 0, porvencer: 1, reinformar: 2, verificar: 3, firma: 4, enplazo: 5, sinplazo: 6 };
+
+  function vAgenda() {
+    const grupo = pref.get('agenda-grupo') === 'area' ? 'area' : 'responsable';
+    const fEst = pref.get('agenda-est') || '';
+    const fOri = pref.get('agenda-ori') || '';
+    const todos = itemsAgenda();
+    const lista = todos.filter((x) => (!fEst || (fEst === 'atrasado' ? x.est === 'vencida' : fEst === 'semana' ? x.est === 'vencida' || x.est === 'porvencer' : fEst === 'sinplazo' ? x.est === 'sinplazo' : fEst === 'sinresp' ? !x.responsable.trim() : true)) && (!fOri || x.origen === fOri));
+    const k = { tot: todos.length, ven: todos.filter((x) => x.est === 'vencida').length, sem: todos.filter((x) => x.est === 'porvencer').length, sp: todos.filter((x) => x.est === 'sinplazo').length, sr: todos.filter((x) => !x.responsable.trim()).length };
+    const clave = (x) => (grupo === 'area' ? x.area || 'Sin área' : x.responsable.trim() || 'Sin responsable');
+    const G = new Map();
+    lista.forEach((x) => { const g = clave(x); if (!G.has(g)) G.set(g, []); G.get(g).push(x); });
+    const grupos = [...G.entries()].map(([g, xs]) => ({ g, xs: xs.sort((a, b) => ORD_EST[a.est] - ORD_EST[b.est] || (a.plazo || '9').localeCompare(b.plazo || '9')), ven: xs.filter((x) => x.est === 'vencida').length }))
+      .sort((a, b) => (a.g.startsWith('Sin ') ? 1 : 0) - (b.g.startsWith('Sin ') ? 1 : 0) || b.ven - a.ven || a.g.localeCompare(b.g, 'es'));
+    const chip = (x) => `<span class="chip ${EST_AG[x.est][0]}">${EST_AG[x.est][1]}</span>`;
+    const sel = (id, val, opts) => `<select data-ag-filtro="${id}">${opts.map(([v, t]) => `<option value="${v}" ${val === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+    return `<div class="cabecera"><div><h1>Agenda de vencimientos</h1><p>Medidas del programa de trabajo, medidas de investigación y reentregas de IRL en un solo lugar, agrupadas por ${grupo === 'area' ? 'área' : 'responsable'}. El responsable es el que quedó registrado en cada módulo.</p></div>
+        <div class="acciones seg-grupo" role="group" aria-label="Agrupar por"><button class="btn ${grupo === 'responsable' ? 'prim' : ''}" data-a="ag-grupo" data-g="responsable" aria-pressed="${grupo === 'responsable'}">Por responsable</button><button class="btn ${grupo === 'area' ? 'prim' : ''}" data-a="ag-grupo" data-g="area" aria-pressed="${grupo === 'area'}">Por área</button></div></div>
+      <div class="rejilla r4 kpi-ag">
+        <div class="tarjeta kpi ${k.ven ? 'alerta' : ''}"><div class="v">${k.ven}</div><div class="e">vencidas</div></div>
+        <div class="tarjeta kpi"><div class="v">${k.sem}</div><div class="e">vencen en ${GES.POR_VENCER || 7} días o menos</div></div>
+        <div class="tarjeta kpi"><div class="v">${k.sp}</div><div class="e">sin plazo</div></div>
+        <div class="tarjeta kpi ${k.sr ? 'alerta' : ''}"><div class="v">${k.sr}</div><div class="e">sin responsable</div></div></div>
+      <div class="barra-filtros" role="group" aria-label="Filtros de la agenda" style="margin-top:14px">
+        <div class="campo"><label>Mostrar</label>${sel('est', fEst, [['', 'Todo lo abierto'], ['atrasado', 'Solo vencidas'], ['semana', 'Vencidas y por vencer'], ['sinplazo', 'Sin plazo'], ['sinresp', 'Sin responsable']])}</div>
+        <div class="campo"><label>Origen</label>${sel('ori', fOri, [['', 'Todos'], ['Programa de trabajo', 'Programa de trabajo'], ['Investigación', 'Investigación'], ['IRL', 'IRL']])}</div></div>
+      ${grupos.length ? grupos.map(({ g, xs, ven }) => `<section class="tarjeta ag-grupo"><h2>${esc(g)} <span class="muted peq">· ${xs.length} ${xs.length === 1 ? 'pendiente' : 'pendientes'}${ven ? ` · <span class="txt-crit">${ven} ${ven === 1 ? 'vencida' : 'vencidas'}</span>` : ''}</span></h2>
+          <div class="tabla-scroll"><table class="t compacta"><thead><tr><th>Plazo</th><th>Qué</th><th>Origen</th><th>Estado</th><th></th></tr></thead><tbody>${xs.map((x) => `<tr><td class="peq">${x.plazo ? fmtFecha(x.plazo) : '—'}</td><td>${esc(corto(x.que, 140))}<small class="d-pend">${esc(x.ref)}${grupo === 'area' && x.responsable ? ' · ' + esc(x.responsable) : ''}</small></td><td class="peq">${x.origen}</td><td>${chip(x)}</td><td><a class="btn chico" href="#/${x.h}">Abrir</a></td></tr>`).join('')}</tbody></table></div></section>`).join('')
+        : `<div class="tarjeta vacio"><b>${todos.length ? 'Nada con estos filtros' : 'Sin pendientes con plazo o responsable'}</b>Aquí aparecen las medidas del programa con ejecutor o plazo, las medidas de investigación abiertas y las personas por reinformar o con firma pendiente.</div>`}`;
+  }
+
+  // ============================================================
+  //  PRIMER RECORRIDO (portada)
+  // ============================================================
+  function filaGuia(m) {
+    const con = m.filas.filter((f) => f.peligro);
+    if (!con.length) return null;
+    const rf = con.filter((f) => MOD.rfDeFila(f) || (f.rcs || []).length);
+    const base = rf.length ? rf : con;
+    return base.slice().sort((a, b) => Math.max(CAT.severidad(b.nivel), CAT.severidad(b.nivelR)) - Math.max(CAT.severidad(a.nivel), CAT.severidad(a.nivelR)))[0];
+  }
+  function pasosGuia() {
+    const M = st.matrices;
+    const mSel = A.matriz(pref.get('guia-m') || '') || M.find((m) => m.filas.length) || M[0];
+    const P = [];
+    const libros = ((st.catalogo.rf && st.catalogo.rf.libros) || []).length;
+    P.push({ n: 'Documentos', t: 'Libros RF y documentos Codelco', ok: libros > 0, txt: libros ? `${libros} libro(s) RF cargado(s) en el catálogo.` : 'Conecta la Biblioteca ICV o carga los libros RF: de ahí salen los controles críticos.', h: libros ? 'rf' : 'docs', b: libros ? 'Ver RF' : 'Ir a la biblioteca' });
+    if (!mSel) {
+      P.push({ n: 'MIPER', t: 'El riesgo', ok: false, txt: 'Importa las MIPER vigentes (SIGO-F-006) o crea una nueva.', h: 'matrices', b: 'Ir a MIPER' });
+      ['Programa · La medida que viene de ese riesgo', 'PTS · El procedimiento de la tarea', 'IRL · Lo que se informa a quien hace la tarea'].forEach((x) => { const [n, t] = x.split(' · '); P.push({ n, t, ok: false, txt: 'Disponible cuando haya una MIPER.', off: true }); });
+    } else {
+      const f = filaGuia(mSel);
+      const t = f ? mSel.tareas.find((x) => x.id === f.tareaId) || {} : mSel.tareas[0] || {};
+      P.push({ n: 'MIPER', t: 'El riesgo', ok: !!f, txt: f ? `«${corto(f.peligro, 90)}» en la tarea «${corto(t.tarea, 70)}»${(f.rcs || []).length ? ` · ${f.rcs.map((b) => RF.etiqueta(b.rc)).join(', ')}` : ''}.` : 'La MIPER aún no tiene filas de riesgo.', h: f ? `m/${mSel.id}/matriz` : `m/${mSel.id}/matriz`, b: 'Ver en la MIPER' });
+      const med = f ? PRG.medidas(mSel).filter((x) => x.f && x.f.id === f.id) : [];
+      const conPlan = med.filter((x) => PRG.estado(mSel, x.key) !== 'porPlanificar');
+      const md = conPlan[0] || med[0];
+      const a = md && PRG.accion(mSel, md.key);
+      P.push({ n: 'Programa', t: 'La medida que viene de ese riesgo', ok: !!conPlan.length, txt: md ? `«${corto(md.texto, 90)}» · ${PRG.EST[PRG.estado(mSel, md.key)]}${a && a.plazo ? ` para el ${fmtFecha(a.plazo)}` : ''}${a && a.ejecutor ? ` · ${a.ejecutor}` : ''}.` : 'La fila aún no tiene medidas.', h: `m/${mSel.id}/terreno/programa`, b: 'Abrir programa' });
+      const ep = t.id ? PRG.estadoPts(mSel, t) : { k: 'sin', t: 'Sin PTS' };
+      P.push({ n: 'PTS', t: 'El procedimiento de la tarea', ok: ep.k === 'ok', txt: t.id ? `Procedimiento de «${corto(t.tarea, 70)}»: ${ep.t}.` : 'Sin tareas.', h: t.id ? `m/${mSel.id}/terreno/pts/${t.id}` : `m/${mSel.id}/terreno/pts`, b: 'Abrir PTS' });
+      const pu = t.puesto ? st.irl.puestos.find((p) => CAT.norm(p.nombre) === CAT.norm(t.puesto)) : null;
+      P.push({ n: 'IRL', t: 'Lo que se informa a quien hace la tarea', ok: !!(pu && pu.revision), txt: !t.puesto ? 'La tarea no indica puesto de trabajo (cargo).' : pu ? `Puesto «${pu.nombre}»: ${pu.revision ? `revisión ${pu.revision} oficial` : 'en borrador'}.` : `El puesto «${t.puesto}» aún no tiene IRL.`, h: pu ? `irl-p/${pu.id}/riesgos` : 'irl', b: pu ? 'Abrir IRL' : 'Crear IRL' });
+    }
+    const casos = mSel ? st.casos.filter((c) => c.matrizId === mSel.id) : [];
+    const c = casos[0] || st.casos[0];
+    P.push({ n: 'Investigación', t: 'Si igual ocurre un incidente', ok: !!c, txt: c ? `${c.folio} «${corto(c.titulo, 70)}»: hechos, causas y medidas que vuelven a la MIPER.` : 'Aún no hay casos. En Investigación puedes cargar un caso de ejemplo para aprender.', h: c ? `caso/${c.id}/antecedentes` : 'casos', b: c ? 'Abrir caso' : 'Ir a Investigación' });
+    P.push({ n: 'Terreno', t: 'Lo que se observa en terreno', ok: st.obs.length > 0, txt: st.obs.length ? `${st.obs.length} observación(es) registradas, ${st.obs.filter((o) => o.estado === 'abierta').length} abiertas.` : 'Registra hallazgos sin nombres y derívalos a la MIPER, al programa o a una investigación.', h: 'obs', b: st.obs.length ? 'Ver observaciones' : 'Registrar' });
+    return { P, mSel };
+  }
+  function bloquePortada() {
+    if (pref.get('guia-oculta') === '1') return `<p class="guia-mostrar peq"><button class="btn chico fant" data-a="guia-mostrar">Mostrar el primer recorrido</button> <a class="btn chico fant" href="#/agenda">${icono('reloj')}Agenda de vencimientos</a> <button class="btn chico fant" data-a="obs-nueva">${icono('ampolleta')}Registrar observación</button></p>`;
+    const { P, mSel } = pasosGuia();
+    const listos = P.filter((x) => x.ok).length;
+    const selM = st.matrices.length > 1 ? `<div class="campo guia-sel"><label>MIPER del recorrido</label><select data-guia-m>${st.matrices.map((m) => `<option value="${m.id}" ${mSel && mSel.id === m.id ? 'selected' : ''}>${esc(corto(m.nombre, 60))}</option>`).join('')}</select></div>` : '';
+    return `<section class="tarjeta bloque guia" aria-labelledby="t-guia">
+      <div class="sec-cab fila"><div><p class="ceja">Primer recorrido · ${listos} de ${P.length} pasos con datos</p><h2 id="t-guia" class="titulo-sec">Así se conecta una medida con su riesgo</h2></div>
+        <div class="derecha fila-flex"><a class="btn chico" href="#/agenda">${icono('reloj')}Agenda</a><button class="btn chico" data-a="obs-nueva">${icono('ampolleta')}Registrar observación</button><button class="btn chico fant" data-a="guia-ocultar">Ocultar guía</button></div></div>
+      <p class="muted peq">Cada paso lee los registros de este navegador y abre el registro real en su módulo. Lo que cambies allí se ve aquí al volver.</p>
+      ${selM}
+      <ol class="guia-pasos">${P.map((x, i) => `<li class="${x.ok ? 'ok' : ''}${x.off ? ' off' : ''}"><span class="g-n" aria-hidden="true">${x.ok ? '✓' : i + 1}</span><div class="g-txt"><small>${esc(x.n)}</small><b>${esc(x.t)}</b><span class="peq">${esc(x.txt)}</span></div>${x.h ? `<a class="btn chico" href="#/${x.h}">${esc(x.b)}</a>` : ''}</li>`).join('')}</ol>
+    </section>`;
+  }
+
+  // ============================================================
+  //  PENDIENTES Y REGISTRO
+  // ============================================================
+  function pendientes(add) {
+    st.obs.filter((o) => o.estado === 'abierta').forEach((o) => {
+      const d = MOD.diasDesde(o.creado) || 0;
+      add({ modulo: 'Investigación', area: o.area || '', prioridad: o.tipo !== 'observacion' || d >= 7 ? 'Media' : 'Baja', titulo: `Derivar o cerrar ${o.folio} (${TIPOS[o.tipo].toLowerCase()})`, detalle: `${corto(o.que, 110)}${d ? ` · registrada hace ${d} día(s)` : ''}`, accion: 'Ver observación', h: 'obs' });
+    });
+  }
+
+  A.VISTA_HERR.obs = 'inv';
+  A.VISTA_HERR.agenda = 'general';
+  A.HERR.inv.items.push(['obs', 'ampolleta', 'Observaciones de terreno', 'Hallazgos sin nombres']);
+  A.HERR.general.items.push(['agenda', 'reloj', 'Agenda de vencimientos', 'Plazos por responsable o área']);
+  A.registrar({
+    vistas: { obs: vObs, agenda: vAgenda },
+    acciones, change: onChange,
+    contadores: { obs: () => st.obs.filter((o) => o.estado === 'abierta').length, agenda: () => itemsAgenda().filter((x) => x.est === 'vencida').length },
+  });
+
+  return { TIPOS, itemsAgenda, pasosGuia, bloquePortada, pendientes, nuevoFolio, RE_PERSONAL };
+})();
+
+/* ============================================================
+   previa.js — v3.8 · Vista previa del Excel y del Word antes de descargar
+   Lee el archivo recién generado (el mismo que se va a descargar) y muestra sus
+   hojas o su texto. No reproduce estilos, colores ni combinación de celdas: eso
+   lo conserva el archivo. Se desactiva en Ajustes («Revisar el Excel y el Word…»).
+   ============================================================ */
+(() => {
+  'use strict';
+  const A = window.APP;
+  const { esc, modal } = A;
+  const MAX_FILAS = 200, MAX_COLS = 26, MAX_HOJAS = 10, MAX_BLOQUES = 500;
+  const col = (n) => XL.numToCol(n);
+
+  async function previaXlsx(buf) {
+    const wb = await XL.readWorkbook(buf);
+    const hojas = wb.sheets.filter((s) => s.state === 'visible').slice(0, MAX_HOJAS);
+    const out = [];
+    for (const h of hojas) {
+      const sh = await wb.readSheet(h.name);
+      if (!sh) continue;
+      const filas = sh.filas().slice(0, MAX_FILAS);
+      const nCols = Math.min(MAX_COLS, sh.maxC || 1);
+      const total = sh.filas().length;
+      out.push({ nombre: h.name, total, html: filas.length ? `<div class="prev-tabla"><table class="t compacta prev-xl"><thead><tr><th></th>${Array.from({ length: nCols }, (_, i) => `<th>${col(i + 1)}</th>`).join('')}</tr></thead><tbody>${filas.map((r) => {
+        const cel = new Map(sh.celdas(r, nCols));
+        return `<tr><th>${r}</th>${Array.from({ length: nCols }, (_, i) => { const v = cel.get(i + 1); return `<td>${v === undefined || v === null ? '' : esc(String(v).slice(0, 300))}</td>`; }).join('')}</tr>`;
+      }).join('')}</tbody></table></div>${total > MAX_FILAS ? `<p class="muted peq">Se muestran las primeras ${MAX_FILAS} de ${total} filas con datos.</p>` : ''}` : '<p class="muted peq">Hoja sin datos.</p>' });
+    }
+    return out.length ? `<p class="peq">${out.length} hoja(s). Abre cada una para revisarla.</p>${out.map((h, i) => `<details class="prev-hoja"${i === 0 ? ' open' : ''}><summary><b>${esc(h.nombre)}</b> <span class="muted peq">· ${h.total} fila(s) con datos</span></summary>${h.html}</details>`).join('')}` : '<p class="muted">El libro no tiene hojas visibles.</p>';
+  }
+
+  async function previaDocx(buf) {
+    const z = await XL.unzip(buf);
+    const xml = await z.read('word/document.xml');
+    if (!xml) return '<p class="muted">No se pudo leer el contenido del Word.</p>';
+    const d = new DOMParser().parseFromString(xml, 'application/xml');
+    const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const body = d.getElementsByTagNameNS(W, 'body')[0];
+    if (!body) return '<p class="muted">El Word no tiene contenido.</p>';
+    const texto = (n) => [...n.getElementsByTagNameNS(W, 't')].map((t) => t.textContent).join('');
+    const estilo = (p) => { const s = p.getElementsByTagNameNS(W, 'pStyle')[0]; return s ? s.getAttributeNS(W, 'val') || s.getAttribute('w:val') || '' : ''; };
+    const partes = [];
+    let n = 0;
+    for (const el of body.children) {
+      if (n++ > MAX_BLOQUES) { partes.push('<p class="muted peq">… (vista acortada)</p>'); break; }
+      if (el.localName === 'p') {
+        const t = texto(el).trim();
+        if (!t) continue;
+        const s = estilo(el);
+        partes.push(/Heading1|Titulo1|Ttulo1|^1$/i.test(s) ? `<h3>${esc(t)}</h3>` : /Heading|Titulo|Ttulo/i.test(s) ? `<h4>${esc(t)}</h4>` : `<p>${esc(t)}</p>`);
+      } else if (el.localName === 'tbl') {
+        const filas = [...el.getElementsByTagNameNS(W, 'tr')].filter((tr) => tr.parentNode === el).slice(0, 120);
+        partes.push(`<div class="prev-tabla"><table class="t compacta">${filas.map((tr) => `<tr>${[...tr.getElementsByTagNameNS(W, 'tc')].filter((tc) => tc.parentNode === tr).map((tc) => `<td>${esc(texto(tc)).slice(0, 600)}</td>`).join('')}</tr>`).join('')}</table></div>`);
+      }
+    }
+    return `<div class="prev-doc">${partes.join('') || '<p class="muted">El Word no tiene texto.</p>'}</div>`;
+  }
+
+  // Devuelve true si la persona confirma la descarga
+  A.vistaPrevia = async (blob, nombre) => {
+    const buf = await blob.arrayBuffer();
+    const esXl = /\.xlsx$/i.test(nombre);
+    let html;
+    try { html = esXl ? await previaXlsx(buf) : await previaDocx(buf); } catch (e) { console.warn('Vista previa', e); return true; }
+    const r = await modal({
+      titulo: `Revisar antes de descargar · ${nombre}`,
+      ancho: true,
+      html: `<p class="muted peq">Este es el archivo que se va a descargar. La vista no reproduce estilos, colores ni combinación de celdas; el archivo los conserva. Puedes desactivar esta revisión en Respaldo y ajustes.</p><div class="prev-cuerpo">${html}</div>`,
+      botones: [{ texto: 'Cancelar', valor: false }, { texto: `Descargar ${esXl ? 'Excel' : 'Word'}`, clase: 'prim', valor: true }],
+    });
+    return r === true;
+  };
+})();
+
+/* ============================================================
    rfvista.js — Vista «Riesgos de Fatalidad» (MIPER): los 31 RF de
    Codelco, ficha por RF (bowtie, controles críticos, cartillas,
    estándar de desempeño), aplicabilidad a la empresa, línea base
@@ -10179,6 +10736,7 @@ const BIB = (() => {
         <img class="ph-foto" src="${BANNER}" alt="Camión de extracción en un rajo">
         <div class="ph-txt"><p class="ceja">Prevención de Riesgos · ICV–DMH</p><h1 id="t-portada">Plataforma SST</h1><p>MIPER, información de riesgos laborales e investigación de accidentes con los mismos datos. Sin servidor: todo queda en este navegador.</p></div>
       </section>
+      ${typeof TER !== 'undefined' ? TER.bloquePortada() : ''}
       <section class="bloque" aria-labelledby="t-res">
         <div class="sec-cab"><h2 id="t-res" class="titulo-sec">Resumen de gestión</h2><p class="muted peq">Calculado desde los registros de este navegador. Cada cifra abre su listado.</p></div>
         ${GES.filtroArea()}
